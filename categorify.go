@@ -42,7 +42,7 @@ type Report struct {
 		Description string `json:"description,omitempty"`
 	} `json:"rating"`
 	Confidence     string         `json:"confidence_level,omitempty"`
-	Category       []string       `json:"category,omitempty"`
+	Categories     []string       `json:"category,omitempty"`
 	KeywordHeatmap map[string]int `json:"keyword_heatmap,omitempty"`
 }
 
