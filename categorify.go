@@ -1,3 +1,5 @@
+// Package categorify simplifies interaction with Categorify API.
+// More about Categorify: https://categorify.org.
 package categorify
 
 import (
