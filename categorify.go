@@ -29,55 +29,63 @@ func NewWithClient(client *http.Client) *Categorify {
 
 // Report represents categorify's website report.
 type Report struct {
-	Domain      string `json:"domain"`
+	Domain      string `json:"domain,omitempty"`
 	IP          string `json:"ip,omitempty"`
 	CountryCode string `json:"country-code,omitempty"`
 	Country     string `json:"country,omitempty"`
 	Rating      struct {
-		Language    bool   `json:"language"`
-		Violence    bool   `json:"violence"`
-		Nudity      bool   `json:"nudity"`
-		Adult       bool   `json:"adult"`
-		Value       string `json:"value"`
-		Description string `json:"description"`
+		Language    bool   `json:"language,omitempty"`
+		Violence    bool   `json:"violence,omitempty"`
+		Nudity      bool   `json:"nudity,omitempty"`
+		Adult       bool   `json:"adult,omitempty"`
+		Value       string `json:"value,omitempty"`
+		Description string `json:"description,omitempty"`
 	} `json:"rating"`
 	Confidence     string         `json:"confidence_level,omitempty"`
-	Category       []string       `json:"category"`
-	KeywordHeatmap map[string]int `json:"keyword_heatmap"`
+	Category       []string       `json:"category,omitempty"`
+	KeywordHeatmap map[string]int `json:"keyword_heatmap,omitempty"`
+}
+
+type respError struct {
+	Result string `json:"result,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+type getFunc func(string) (*http.Response, error)
+
+func lookup(location string, f getFunc) (*Report, error) {
+	resp, err := f(location)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	dec := json.NewDecoder(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		var e respError
+		err = dec.Decode(&e)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("result: %s, reason: %s", e.Result, e.Reason)
+	}
+
+	var r Report
+	err = dec.Decode(&r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &r, nil
 }
 
 // Lookup gets categorify report with default http client.
 func Lookup(domain string) (*Report, error) {
-	resp, err := http.Get(fmt.Sprintf(apiLocation, domain))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var r Report
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &r, nil
+	return lookup(fmt.Sprintf(apiLocation, domain), http.Get)
 }
 
 // Lookup gets categorify report with a customised configuration.
 func (c *Categorify) Lookup(domain string) (*Report, error) {
-	resp, err := c.Client.Get(fmt.Sprintf(apiLocation, domain))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var r Report
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&r)
-	if err != nil {
-		return nil, err
-	}
-
-	return &r, nil
+	return lookup(fmt.Sprintf(apiLocation, domain), c.Client.Get)
 }
